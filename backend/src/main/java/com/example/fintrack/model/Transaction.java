@@ -1,39 +1,36 @@
 package com.example.fintrack.model;
 
+import java.time.LocalDate;
+
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-@Document(collection = "transaction")  // If using MongoDB
+@Document(collection = "transaction")
 public class Transaction {
 
     @Id
-    private String userId;
-    private String type;
+    private String id;
+    private String type;   // Income or Expense
     private double amount;
     private String category;
-    private String description;
-    private String date;
+    private LocalDate date;
 
-    // Constructors
     public Transaction() {
     }
 
-    public Transaction(String userId, String type, double amount, String category, String description, String date) {
-        this.userId = userId;
+    public Transaction(String type, double amount, String category, LocalDate date) {
         this.type = type;
         this.amount = amount;
         this.category = category;
-        this.description = description;
         this.date = date;
     }
 
-    // Getters and Setters
-    public String getUserId() {
-        return userId;
+    public String getId() {
+        return id;
     }
 
-    public void setUserId(String userId) {
-        this.userId = userId;
+    public void setId(String id) {
+        this.id = id;
     }
 
     public String getType() {
@@ -60,19 +57,11 @@ public class Transaction {
         this.category = category;
     }
 
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public String getDate() {
+    public LocalDate getDate() {
         return date;
     }
 
-    public void setDate(String date) {
+    public void setDate(LocalDate date) {
         this.date = date;
     }
 }

@@ -13,7 +13,7 @@ import javax.swing.JPanel;
 
 public class FinanceTrackerHome extends JFrame {
 
-    private JPanel contentPanel;
+    private final JPanel contentPanel;
 
     public FinanceTrackerHome() {
         setTitle("Personal Finance Tracker");
@@ -61,21 +61,16 @@ public class FinanceTrackerHome extends JFrame {
         public void actionPerformed(ActionEvent e) {
             String command = ((JButton) e.getSource()).getText();
             switch (command) {
-                case "Home":
+                case "Home" ->
                     showPanel(new HomePanel());
-                    break;
-                case "Add Transactions":
+                case "Add Transactions" ->
                     showPanel(new AddTransactionPanel());
-                    break;
-                case "Set Budgets":
+                case "Set Budgets" ->
                     showPanel(new SetBudgetsPanel());
-                    break;
-                case "Predictions":
+                case "Predictions" ->
                     showPanel(new PredictionsPanel());
-                    break;
-                case "View Reports":
+                case "View Reports" ->
                     showPanel(new ViewReportsPanel());
-                    break;
             }
         }
     }

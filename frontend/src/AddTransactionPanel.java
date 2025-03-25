@@ -1,23 +1,37 @@
 
+import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Font;
+import java.awt.Frame;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URI;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 import javax.swing.JButton;
 import javax.swing.JComboBox;
+import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JSpinner;
 import javax.swing.JTextField;
+import javax.swing.SpinnerDateModel;
+import javax.swing.SwingUtilities;
 
 public class AddTransactionPanel extends JPanel {
 
     private JComboBox<String> typeDropdown, categoryDropdown;
-    private JTextField amountField;
+    private JTextField amountField, dateField;
     private JLabel categoryLabel;
 
     public AddTransactionPanel() {
@@ -38,6 +52,13 @@ public class AddTransactionPanel extends JPanel {
         JLabel amountLabel = new JLabel("Amount:");
         amountField = new JTextField(15);
 
+        JLabel dateLabel = new JLabel("Transaction Date:");
+        dateField = new JTextField(12);
+        dateField.setEditable(false);
+        JButton dateButton = new JButton("📅");
+        dateButton.setFocusPainted(false);
+        dateButton.addActionListener(e -> openDatePicker());
+
         categoryLabel = new JLabel("Category:");
         String[] categories = {"Food", "Hospital", "Fuel", "Rent", "Electricity", "Investments", "Others"};
         categoryDropdown = new JComboBox<>(categories);
@@ -49,54 +70,21 @@ public class AddTransactionPanel extends JPanel {
         submitButton.setFont(new Font("Arial", Font.BOLD, 14));
         submitButton.setFocusPainted(false);
 
-        // Hide category initially (default: "Income" selected)
+        // Hide category initially
         categoryLabel.setVisible(false);
         categoryDropdown.setVisible(false);
 
-        // Change listener for type dropdown
-        typeDropdown.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                if (typeDropdown.getSelectedItem().equals("Expense")) {
-                    categoryLabel.setVisible(true);
-                    categoryDropdown.setVisible(true);
-                } else {
-                    categoryLabel.setVisible(false);
-                    categoryDropdown.setVisible(false);
-                }
-                revalidate();
-                repaint();
-            }
+        // Show/hide category based on transaction type
+        typeDropdown.addActionListener(e -> {
+            boolean isExpense = typeDropdown.getSelectedItem().equals("Expense");
+            categoryLabel.setVisible(isExpense);
+            categoryDropdown.setVisible(isExpense);
+            revalidate();
+            repaint();
         });
 
         // Submit button action
-        submitButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                try {
-                    double amount = Double.parseDouble(amountField.getText().trim());
-                    if (amount <= 0) {
-                        JOptionPane.showMessageDialog(null, "Amount must be greater than zero!", "Error", JOptionPane.ERROR_MESSAGE);
-                        return;
-                    }
-
-                    String transactionType = (String) typeDropdown.getSelectedItem();
-                    String category = transactionType.equals("Expense") ? (String) categoryDropdown.getSelectedItem() : "N/A";
-
-                    JOptionPane.showMessageDialog(null,
-                            "Transaction Added Successfully!\n\nType: " + transactionType
-                            + "\nAmount: $" + amount
-                            + "\nCategory: " + category,
-                            "Success", JOptionPane.INFORMATION_MESSAGE);
-
-                    // Reset fields
-                    amountField.setText("");
-                    categoryDropdown.setSelectedIndex(0);
-                } catch (NumberFormatException ex) {
-                    JOptionPane.showMessageDialog(null, "Please enter a valid amount!", "Error", JOptionPane.ERROR_MESSAGE);
-                }
-            }
-        });
+        submitButton.addActionListener(this::addTransaction);
 
         // Layout setup
         gbc.gridx = 0;
@@ -116,6 +104,14 @@ public class AddTransactionPanel extends JPanel {
 
         gbc.gridx = 0;
         gbc.gridy++;
+        add(dateLabel, gbc);
+        gbc.gridx = 1;
+        add(dateField, gbc);
+        gbc.gridx = 2;
+        add(dateButton, gbc);
+
+        gbc.gridx = 0;
+        gbc.gridy++;
         add(categoryLabel, gbc);
         gbc.gridx = 1;
         add(categoryDropdown, gbc);
@@ -124,5 +120,93 @@ public class AddTransactionPanel extends JPanel {
         gbc.gridy++;
         gbc.gridwidth = 2;
         add(submitButton, gbc);
+    }
+
+    // 📌 **Send Data to Spring Boot Backend using Map**
+    public void addTransaction(ActionEvent e) {
+        try {
+            // Validate input
+            double amount = Double.parseDouble(amountField.getText().trim());
+            if (amount <= 0) {
+                JOptionPane.showMessageDialog(this, "Amount must be greater than zero!", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            String transactionType = (String) typeDropdown.getSelectedItem();
+            String category = transactionType.equals("Expense") ? (String) categoryDropdown.getSelectedItem() : "N/A";
+            String date = dateField.getText().trim();
+
+            if (date.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Please select a valid date!", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            // Create a Map for the JSON structure
+            Map<String, String> transactionData = new HashMap<>();
+            transactionData.put("type", transactionType);
+            transactionData.put("amount", String.valueOf(amount));
+            transactionData.put("category", category);
+            transactionData.put("date", date);
+
+            // Convert Map to JSON string manually
+            String json = String.format(
+                    "{\"type\":\"%s\", \"amount\":%s, \"category\":\"%s\", \"date\":\"%s\"}",
+                    transactionData.get("type"),
+                    transactionData.get("amount"),
+                    transactionData.get("category"),
+                    transactionData.get("date")
+            );
+
+            // Send HTTP POST request to backend
+            URL url = new URI("http://localhost:8080/transactions/add").toURL();
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Content-Type", "application/json");
+            conn.setDoOutput(true);
+
+            try (OutputStream os = conn.getOutputStream()) {
+                byte[] input = json.getBytes(StandardCharsets.UTF_8);
+                os.write(input, 0, input.length);
+            }
+
+            int responseCode = conn.getResponseCode();
+            if (responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_CREATED) {
+                JOptionPane.showMessageDialog(this, "Transaction Added Successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+                amountField.setText("");
+                categoryDropdown.setSelectedIndex(0);
+                dateField.setText("");
+            } else {
+                JOptionPane.showMessageDialog(this, "Failed to add transaction!", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Error: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    // 📌 **Custom Date Picker Dialog**
+    private void openDatePicker() {
+        JDialog dateDialog = new JDialog((Frame) SwingUtilities.getWindowAncestor(this), "Select Date", true);
+        dateDialog.setLayout(new BorderLayout());
+
+        JSpinner dateSpinner = new JSpinner(new SpinnerDateModel());
+        JSpinner.DateEditor editor = new JSpinner.DateEditor(dateSpinner, "yyyy-MM-dd");
+        dateSpinner.setEditor(editor);
+
+        JButton selectButton = new JButton("OK");
+        selectButton.addActionListener(e -> {
+            Date selectedDate = (Date) dateSpinner.getValue();
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+            dateField.setText(sdf.format(selectedDate));
+            dateDialog.dispose();
+        });
+
+        JPanel panel = new JPanel();
+        panel.add(dateSpinner);
+        panel.add(selectButton);
+
+        dateDialog.add(panel, BorderLayout.CENTER);
+        dateDialog.pack();
+        dateDialog.setLocationRelativeTo(this);
+        dateDialog.setVisible(true);
     }
 }
