@@ -31,7 +31,7 @@ public class NotificationService {
     public void checkBudgetLimits() {
         List<Budget> budgets = budgetRepository.findAll();
         for (Budget budget : budgets) {
-            if (budget.getAllocatedAmount() > budget.getAmount()) {
+            if (budget.getRemainingAmount() > budget.getAmount()) {
                 System.out.println("🚨 Alert: Budget exceeded for " + budget.getCategory());
             }
         }

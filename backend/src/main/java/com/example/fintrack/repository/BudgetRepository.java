@@ -11,4 +11,7 @@ import java.util.List;
 public interface BudgetRepository extends MongoRepository<Budget, String> {
     List<Budget> findByCategory(String category);
     List<Budget> findByDueDate(LocalDate dueDate);  // Fixed: Use LocalDate
+ ;
+      List<Budget> findByCategoryAndYearAndMonth(String category, int year, String month);
+    
 }

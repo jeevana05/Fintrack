@@ -28,6 +28,12 @@ import javax.swing.JTextField;
 import javax.swing.SpinnerDateModel;
 import javax.swing.SwingUtilities;
 
+import javax.swing.SwingWorker; // For SwingWorker
+import java.io.BufferedReader;  // For BufferedReader
+import java.io.InputStreamReader;  // For InputStreamReader
+import java.nio.charset.StandardCharsets;  // For StandardCharsets
+
+
 public class AddTransactionPanel extends JPanel {
 
     private JComboBox<String> typeDropdown, categoryDropdown;
@@ -175,13 +181,61 @@ public class AddTransactionPanel extends JPanel {
                 amountField.setText("");
                 categoryDropdown.setSelectedIndex(0);
                 dateField.setText("");
+                if (transactionType.equals("Expense")) {
+                    String transactionDate = date.toString();
+                updateRemainingBudget(category, amount,transactionDate);
+            }
             } else {
                 JOptionPane.showMessageDialog(this, "Failed to add transaction!", "Error", JOptionPane.ERROR_MESSAGE);
             }
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "Error: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
+         
     }
+      private void updateRemainingBudget(String category, double amount, String transactionDate) {
+    new SwingWorker<Void, Void>() {
+        @Override
+        protected Void doInBackground() {
+            try {
+                // Create the URL with the necessary parameters (without encoding the transaction date)
+                URL url = new URL("http://localhost:8080/budgets/update?category=" + category + 
+                                  "&amount=" + amount + 
+                                  "&transactionDate=" + transactionDate);
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setDoOutput(true); // Set to true if you need to send data in the body
+                
+                // Get the response code from the server
+                int responseCode = conn.getResponseCode();
+
+                // Check if the response code indicates a successful request
+                if (responseCode == HttpURLConnection.HTTP_OK) {
+                    // Read the server response
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8));
+                    String response = reader.readLine().trim(); // Assuming response is a single number (remaining budget)
+                    reader.close();
+
+                    // Parse the response as a double (remaining budget)
+                    double remainingBudget = Double.parseDouble(response);
+
+                    // If remaining budget is less than or equal to 0, show a warning message
+                    if (remainingBudget <= 0) {
+                        JOptionPane.showMessageDialog(null, "Budget exceeded for category: " + category, "Warning", JOptionPane.WARNING_MESSAGE);
+                    }
+                } else {
+                    // Handle non-OK response from the server
+                    JOptionPane.showMessageDialog(null, "Failed to update budget for category: " + category, "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            } catch (Exception e) {
+                // Handle any exceptions that occur during the process
+                e.printStackTrace();
+                JOptionPane.showMessageDialog(null, "An error occurred while updating the budget.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+            return null;
+        }
+    }.execute();
+}
 
     // 📌 **Custom Date Picker Dialog**
     private void openDatePicker() {
