@@ -18,6 +18,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 
+import com.example.fintrack.service.TransactionService;
 
 
 @RestController
@@ -35,10 +36,37 @@ private BudgetService budgetService;
         System.out.println("Received budget: " + budget);
         return budgetRepository.save(budget);
     }
+@Autowired
+private TransactionService transactionService;
 
-    @GetMapping("/all")
-    public List<Budget> getAllBudgets() {
-        return budgetRepository.findAll();
+//     @PostMapping("/add")
+// public Budget addBudget(@RequestBody Budget budget) {
+//     String userId = budget.getuserId();
+//     String month = budget.getMonth();
+//     int year = budget.getYear();
+//     System.out.println("Received budget: " + budget);
+//     System.out.println("User ID: " + userId + ", Month: " + month + ", Year: " + year);
+//     // Construct monthCode in format yyyyMM
+//     String monthCode = year + String.format("%02d", Integer.parseInt(month));
+    
+//     // ✅ Get income for this specific user for that month
+//     double monthlyIncome = transactionService.getMonthlyIncome(userId, monthCode);
+
+//     budget.setAmount(monthlyIncome);
+//     budget.setRemainingAmount(monthlyIncome); // Full amount available initially
+
+//     return budgetRepository.save(budget);
+// }
+
+
+   @GetMapping("/all")
+public List<Budget> getAllBudgets(@RequestParam String userId) {
+    return budgetRepository.findByUserId(userId);
+}
+    @GetMapping("/allocated")
+    public ResponseEntity<Double> getAllocatedBudget(@RequestParam String userId, @RequestParam String monthCode) {
+        double allocatedBudget = budgetService.getAllocatedBudget(userId, monthCode);
+        return ResponseEntity.ok(allocatedBudget);
     }
 
     @GetMapping("/{id}")
@@ -59,12 +87,13 @@ private BudgetService budgetService;
 
    @PostMapping("/update")
 public ResponseEntity<Double> updateBudget(
+    @RequestParam String userId,
     @RequestParam String category,
     @RequestParam double amount,
     @RequestParam String transactionDate
 ) {
     try {
-        double updated = budgetService.updateBudget(category, amount, transactionDate);
+        double updated = budgetService.updateBudget(userId,category, amount, transactionDate);
 
         if (updated >= 0) {
             System.out.println("Budget updated successfully");

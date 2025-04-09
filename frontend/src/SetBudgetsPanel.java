@@ -24,7 +24,12 @@ public class SetBudgetsPanel extends JPanel {
     private double allocatedBudget = 0;
     private double totalBudget = 0; 
 
-    public SetBudgetsPanel() {
+    private String userId; 
+
+    public SetBudgetsPanel(String userId) {
+        this.userId = userId;
+        System.out.println("SetBudgetsPanel - userId: " + userId);
+
         setLayout(new GridBagLayout());
         setBackground(Color.WHITE);
         GridBagConstraints gbc = new GridBagConstraints();
@@ -129,7 +134,7 @@ public class SetBudgetsPanel extends JPanel {
         monthDropdown.addActionListener(e -> {
             String selectedMonth = (String) monthDropdown.getSelectedItem();
             String monthCode = convertMonthToCode(selectedMonth);
-            fetchMonthlyIncome(monthCode);
+            fetchMonthlyIncome(userId,monthCode);
         });
 
         // Enable date picker button only for specific categories
@@ -141,7 +146,7 @@ public class SetBudgetsPanel extends JPanel {
 
         // Default to current month
         monthDropdown.setSelectedItem(getCurrentMonthName());
-        fetchMonthlyIncome(getCurrentMonthCode());
+        fetchMonthlyIncome(userId,getCurrentMonthCode());
     }
 
     private void setBudget(ActionEvent e) {
@@ -166,13 +171,13 @@ public class SetBudgetsPanel extends JPanel {
                 return;
             }
 
-            sendBudgetToBackend(category, budgetAmount, dueDate, selectedMonth);
+            sendBudgetToBackend(userId,category, budgetAmount, dueDate, selectedMonth);
         } catch (NumberFormatException ex) {
             JOptionPane.showMessageDialog(this, "Please enter a valid number!", "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
-    private void sendBudgetToBackend(String category, double amount, String dueDate, String selectedMonth) {
+    private void sendBudgetToBackend(String userId,String category, double amount, String dueDate, String selectedMonth) {
     try {
         URL url = new URI("http://localhost:8080/budgets/add").toURL();
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -186,6 +191,7 @@ public class SetBudgetsPanel extends JPanel {
 
         // Prepare JSON payload
         Map<String, Object> requestData = new HashMap<>();
+        requestData.put("userId", userId);
         requestData.put("category", category);
         requestData.put("amount", amount);
         requestData.put("remainingAmount", amount);
@@ -194,6 +200,8 @@ public class SetBudgetsPanel extends JPanel {
         requestData.put("year", currentYear); 
 
         String jsonPayload = mapToJson(requestData);
+        System.out.println(jsonPayload); // Debugging output
+
 
         // Send JSON request
         try (OutputStream os = conn.getOutputStream()) {
@@ -203,6 +211,7 @@ public class SetBudgetsPanel extends JPanel {
 
         // Handle response
         int responseCode = conn.getResponseCode();
+System.out.println("RESPONSE CODE: " + responseCode);
         if (responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_CREATED) {
             allocatedBudget += amount;
             remainingLabel.setText("Remaining Budget: Rs " + (totalBudget - allocatedBudget));
@@ -219,13 +228,73 @@ public class SetBudgetsPanel extends JPanel {
 }
 
 
-    private void fetchMonthlyIncome(String monthCode) {
+//     private void fetchMonthlyIncome(String userId,String monthCode) {
+//     SwingWorker<Double, Void> worker = new SwingWorker<>() {
+//         @Override
+//         protected Double doInBackground() {
+//             try {
+               
+//                 URL url = new URL("http://localhost:8080/transactions/income/monthly?userId=" + userId + "&monthCode=" + monthCode);
+
+//                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+//                 conn.setRequestMethod("GET");
+
+//                 int responseCode = conn.getResponseCode();
+//                 System.out.println("Response Code: " + responseCode);
+
+//                 if (responseCode == HttpURLConnection.HTTP_OK) {
+//                     try (BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
+//                         String response = reader.readLine().trim();
+//                         System.out.println("Response: " + response);
+                        
+//                         monthlyIncome = Double.parseDouble(response);
+//                         totalBudget = monthlyIncome;
+//                         allocatedBudget = 0; // Reset allocated budget when changing month
+                        
+//                         return monthlyIncome;
+//                     }
+//                 } else {
+//                     System.out.println("Error: Non-OK response from server");
+//                     JOptionPane.showMessageDialog(SetBudgetsPanel.this, 
+//                         "Failed to fetch income for the selected month", 
+//                         "Error", 
+//                         JOptionPane.ERROR_MESSAGE);
+//                 }
+//             } catch (Exception e) {
+//                 System.out.println("Exception while fetching income:");
+//                 e.printStackTrace();
+//                 JOptionPane.showMessageDialog(SetBudgetsPanel.this, 
+//                     "Error connecting to server", 
+//                     "Error", 
+//                     JOptionPane.ERROR_MESSAGE);
+//             }
+//             return 0.0;
+//         }
+
+//         @Override
+//         protected void done() {
+//             try {
+//                 Double income = get();
+//                 if (income > 0) {
+//                     remainingLabel.setText("Remaining Budget: Rs " + income);
+//                 }
+//             } catch (Exception e) {
+//                 e.printStackTrace();
+//             }
+//         }
+//     };
+
+//     worker.execute();
+// }
+
+private void fetchMonthlyIncome(String userId, String monthCode) {
     SwingWorker<Double, Void> worker = new SwingWorker<>() {
         @Override
         protected Double doInBackground() {
             try {
-                // ✅ Update the URL to match the working one
-                URL url = new URL("http://localhost:8080/transactions/income/monthly?monthCode=" + monthCode);
+                // Fetch both monthly income and the already allocated budget for the selected month
+                URL url = new URL("http://localhost:8080/transactions/income/monthly?userId=" + userId + "&monthCode=" + monthCode);
+
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("GET");
 
@@ -239,9 +308,15 @@ public class SetBudgetsPanel extends JPanel {
                         
                         monthlyIncome = Double.parseDouble(response);
                         totalBudget = monthlyIncome;
-                        allocatedBudget = 0; // Reset allocated budget when changing month
+
+                        // Fetch the allocated budget for the selected month
+                        double allocatedForMonth = fetchAllocatedBudgetForMonth(userId, monthCode);
+                        allocatedBudget = allocatedForMonth;
+
+                        // Recalculate remaining budget
+                        double remainingBudget = totalBudget - allocatedBudget;
                         
-                        return monthlyIncome;
+                        return remainingBudget;
                     }
                 } else {
                     System.out.println("Error: Non-OK response from server");
@@ -264,9 +339,9 @@ public class SetBudgetsPanel extends JPanel {
         @Override
         protected void done() {
             try {
-                Double income = get();
-                if (income > 0) {
-                    remainingLabel.setText("Remaining Budget: Rs " + income);
+                Double remainingBudget = get();
+                if (remainingBudget >= 0) {
+                    remainingLabel.setText("Remaining Budget: Rs " + remainingBudget);
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -276,6 +351,33 @@ public class SetBudgetsPanel extends JPanel {
 
     worker.execute();
 }
+
+// A method to fetch the allocated budget for the selected month from the backend
+private double fetchAllocatedBudgetForMonth(String userId, String monthCode) {
+    double allocated = 0.0;
+    try {
+        URL url = new URL("http://localhost:8080/budgets/allocated?userId=" + userId + "&monthCode=" + monthCode);
+
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("GET");
+
+        int responseCode = conn.getResponseCode();
+        System.out.println("Response Code: " + responseCode);
+
+        if (responseCode == HttpURLConnection.HTTP_OK) {
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8))) {
+                String response = reader.readLine().trim();
+                allocated = Double.parseDouble(response);
+            }
+        } else {
+            System.out.println("Error: Non-OK response from server");
+        }
+    } catch (Exception e) {
+        e.printStackTrace();
+    }
+    return allocated;
+}
+
 
 
     private void openDatePicker() {

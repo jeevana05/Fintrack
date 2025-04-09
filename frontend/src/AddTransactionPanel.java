@@ -33,14 +33,15 @@ import java.io.BufferedReader;  // For BufferedReader
 import java.io.InputStreamReader;  // For InputStreamReader
 import java.nio.charset.StandardCharsets;  // For StandardCharsets
 
-
+ 
 public class AddTransactionPanel extends JPanel {
 
     private JComboBox<String> typeDropdown, categoryDropdown;
     private JTextField amountField, dateField;
     private JLabel categoryLabel;
-
-    public AddTransactionPanel() {
+    private String userId; // User ID to be passed to the backend
+    public AddTransactionPanel(String userId) {
+        this.userId = userId;
         setLayout(new GridBagLayout());
         setBackground(Color.WHITE);
         GridBagConstraints gbc = new GridBagConstraints();
@@ -149,6 +150,7 @@ public class AddTransactionPanel extends JPanel {
 
             // Create a Map for the JSON structure
             Map<String, String> transactionData = new HashMap<>();
+            transactionData.put("userId", userId);
             transactionData.put("type", transactionType);
             transactionData.put("amount", String.valueOf(amount));
             transactionData.put("category", category);
@@ -156,12 +158,13 @@ public class AddTransactionPanel extends JPanel {
 
             // Convert Map to JSON string manually
             String json = String.format(
-                    "{\"type\":\"%s\", \"amount\":%s, \"category\":\"%s\", \"date\":\"%s\"}",
-                    transactionData.get("type"),
-                    transactionData.get("amount"),
-                    transactionData.get("category"),
-                    transactionData.get("date")
-            );
+    "{\"userId\":\"%s\", \"type\":\"%s\", \"amount\":%s, \"category\":\"%s\", \"date\":\"%s\"}",
+    transactionData.get("userId"),
+    transactionData.get("type"),
+    transactionData.get("amount"),
+    transactionData.get("category"),
+    transactionData.get("date")
+);
 
             // Send HTTP POST request to backend
             URL url = new URI("http://localhost:8080/transactions/add").toURL();
@@ -200,8 +203,9 @@ public class AddTransactionPanel extends JPanel {
             try {
                 // Create the URL with the necessary parameters (without encoding the transaction date)
                 URL url = new URL("http://localhost:8080/budgets/update?category=" + category + 
-                                  "&amount=" + amount + 
-                                  "&transactionDate=" + transactionDate);
+                  "&amount=" + amount + 
+                  "&transactionDate=" + transactionDate + 
+                  "&userId=" + userId);
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("POST");
                 conn.setDoOutput(true); // Set to true if you need to send data in the body
