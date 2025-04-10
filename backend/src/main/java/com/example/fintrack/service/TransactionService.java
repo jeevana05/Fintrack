@@ -48,18 +48,19 @@ public class TransactionService {
         transactionRepository.deleteById(id);
     }
 
-    // Method to calculate total income for the current month
-     public double getMonthlyIncome(String monthCode) {
+   // Method to calculate total income for the current month for a specific user
+public double getMonthlyIncome(String userId, String monthCode) {
     // Get the current year
     int currentYear = LocalDate.now().getYear();
-    
+
     // Construct YearMonth using the current year and provided month code
     YearMonth yearMonth = YearMonth.of(currentYear, Integer.parseInt(monthCode));
 
-    // Aggregation pipeline to sum income transactions for the specified month
+    // Aggregation pipeline to sum income transactions for the specified month and user
     Aggregation aggregation = Aggregation.newAggregation(
         Aggregation.match(
             Criteria.where("type").is("Income")
+                    .and("userId").is(userId) // Filter by user
                     .and("date").gte(yearMonth.atDay(1))
                     .lt(yearMonth.plusMonths(1).atDay(1))
         ),
