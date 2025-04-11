@@ -1,14 +1,3 @@
-import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URI;
-import java.net.URL;
-
-import javax.swing.*;
-import javax.swing.border.EmptyBorder;
-
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
@@ -18,28 +7,43 @@ import org.jfree.data.category.DefaultCategoryDataset;
 import org.jfree.chart.axis.CategoryAxis;
 import org.jfree.chart.axis.CategoryLabelPositions;
 
-public class PredictionsPanel extends JPanel {
+import javax.swing.*;
+import javax.swing.border.EmptyBorder;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URI;
+import java.net.URL;
 
-    private JTextField userIdField;
+public class PredictYearlyBudgetUI {
+    private JFrame frame;
     private JButton predictButton;
     private JTextArea resultArea;
     private JPanel chartPanel;
 	private String userId;
 
-    public PredictionsPanel(String userId) {
+    public PredictYearlyBudgetUI() {
 		this.userId = userId;
-        setLayout(new BorderLayout());
-        setBackground(new Color(245, 245, 245));
+        frame = new JFrame("Predict Yearly Budget");
+        frame.setSize(1200, 800);
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setLayout(new BorderLayout());
 
-        JLabel label = new JLabel("Predictions Based on Spending Habits", SwingConstants.CENTER);
-        label.setFont(new Font("Arial", Font.BOLD, 18));
-        label.setForeground(new Color(33, 150, 243));
-        add(label, BorderLayout.NORTH);
+        // Header
+        JPanel headerPanel = new JPanel();
+        headerPanel.setBackground(new Color(52, 152, 219));
+        JLabel titleLabel = new JLabel("Predict Yearly Budget");
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
+        titleLabel.setForeground(Color.WHITE);
+        headerPanel.add(titleLabel);
+        frame.add(headerPanel, BorderLayout.NORTH);
 
-        // Remove user ID field and show only the button
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 20));
+        // Button Panel
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.setLayout(new FlowLayout(FlowLayout.CENTER, 20, 40));
         buttonPanel.setBackground(new Color(236, 240, 241));
-        buttonPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
 
         predictButton = new JButton("Predict Budget");
         predictButton.setFont(new Font("Arial", Font.BOLD, 18));
@@ -47,34 +51,47 @@ public class PredictionsPanel extends JPanel {
         predictButton.setForeground(Color.WHITE);
         predictButton.setFocusPainted(false);
         predictButton.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
-        predictButton.addActionListener(this::predictBudget);
 
-        buttonPanel.add(predictButton);
-        add(buttonPanel, BorderLayout.CENTER);
-
-        resultArea = new JTextArea(6, 40);
-        resultArea.setFont(new Font("Monospaced", Font.PLAIN, 14));
-        resultArea.setWrapStyleWord(true);
-        resultArea.setLineWrap(true);
-        resultArea.setEditable(false);
-        JScrollPane scrollPane = new JScrollPane(resultArea);
-        add(scrollPane, BorderLayout.SOUTH);
-
-        chartPanel = new JPanel();
-        chartPanel.setPreferredSize(new Dimension(500, 400));
-        chartPanel.setBackground(Color.WHITE);
-        add(chartPanel, BorderLayout.EAST);
-    }
-
-    private void predictBudget(ActionEvent e) {
-        try {
-            if (userId == null || userId.trim().isEmpty()) {
-                updateResult("User ID is missing. Please log in again.");
-                return;
+        predictButton.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                predictButton.setBackground(new Color(39, 174, 96));
             }
 
-            URI uri = new URI("http://localhost:8080/predict/fetch?userId=" + userId);
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                predictButton.setBackground(new Color(46, 204, 113));
+            }
+        });
+
+        predictButton.addActionListener(this::predictBudget);
+        buttonPanel.add(predictButton);
+        frame.add(buttonPanel, BorderLayout.CENTER);
+
+        // Result Panel
+        JPanel resultPanel = new JPanel();
+        resultPanel.setBackground(new Color(236, 240, 241));
+        resultArea = new JTextArea(8, 40);
+        resultArea.setFont(new Font("Monospaced", Font.PLAIN, 16));
+        resultArea.setEditable(false);
+        resultArea.setWrapStyleWord(true);
+        resultArea.setLineWrap(true);
+        JScrollPane scrollPane = new JScrollPane(resultArea);
+        resultPanel.add(scrollPane);
+        frame.add(resultPanel, BorderLayout.SOUTH);
+
+        // Chart Panel
+        chartPanel = new JPanel();
+        chartPanel.setBackground(Color.WHITE);
+        frame.add(chartPanel, BorderLayout.EAST);
+
+        frame.setVisible(true);
+    }
+
+    // 1. Fetch prediction from backend
+    private void predictBudget(ActionEvent e) {
+        try {
+            URI uri = new URI("http://localhost:8080/budget/fetch?userId=" + userId);
             URL url = uri.toURL();
+
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("GET");
 
@@ -89,6 +106,7 @@ public class PredictionsPanel extends JPanel {
         }
     }
 
+    // 2. Parse and show budget + chart
     private void parseAndDisplayBudget(String json) {
         if (json == null || json.isEmpty()) {
             updateResult("No data received.");
@@ -130,6 +148,7 @@ public class PredictionsPanel extends JPanel {
         }
     }
 
+    // 3. Show the chart
     private void showBudgetChart(double currentBudget, double year1, double year2, double year3) {
         DefaultCategoryDataset dataset = new DefaultCategoryDataset();
         dataset.addValue(currentBudget, "Budget", "Current Year");
@@ -137,15 +156,22 @@ public class PredictionsPanel extends JPanel {
         dataset.addValue(year2, "Budget", "Year 2 (7% Inflation)");
         dataset.addValue(year3, "Budget", "Year 3 (8% Inflation)");
 
-        JFreeChart barChart = ChartFactory.createBarChart("Budget Prediction", "Year", "Amount ($)", dataset);
+        JFreeChart barChart = ChartFactory.createBarChart(
+                "Budget Prediction",
+                "Year",
+                "Amount ($)",
+                dataset
+        );
+
         CategoryPlot plot = barChart.getCategoryPlot();
         BarRenderer renderer = (BarRenderer) plot.getRenderer();
         renderer.setSeriesPaint(0, new Color(200, 99, 71));
 
         CategoryAxis domainAxis = plot.getDomainAxis();
-        domainAxis.setCategoryLabelPositions(CategoryLabelPositions.UP_45);
+        domainAxis.setCategoryMargin(0.2);
         domainAxis.setTickLabelFont(new Font("SansSerif", Font.BOLD, 14));
-        domainAxis.setCategoryMargin(0.3f);
+        domainAxis.setMaximumCategoryLabelWidthRatio(0.9f);
+        domainAxis.setCategoryLabelPositions(CategoryLabelPositions.UP_45);
 
         chartPanel.removeAll();
         chartPanel.add(new ChartPanel(barChart));
@@ -153,7 +179,12 @@ public class PredictionsPanel extends JPanel {
         chartPanel.repaint();
     }
 
+    // 4. Update result area
     private void updateResult(String message) {
         SwingUtilities.invokeLater(() -> resultArea.setText(message));
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(PredictYearlyBudgetUI::new);
     }
 }
