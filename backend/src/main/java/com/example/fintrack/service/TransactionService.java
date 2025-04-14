@@ -77,5 +77,79 @@ public double getMonthlyIncome(String userId, String monthCode) {
 private static class IncomeResult {
     double totalIncome;
 }
+// Monthly income and expenses
+public Map<String, Double> getMonthlyReport(String userId, String monthCode) {
+    int currentYear = LocalDate.now().getYear();
+    YearMonth yearMonth = YearMonth.of(currentYear, Integer.parseInt(monthCode));
+
+    Date startDate = Date.from(yearMonth.atDay(1).atStartOfDay(ZoneId.systemDefault()).toInstant());
+    Date endDate = Date.from(yearMonth.plusMonths(1).atDay(1).atStartOfDay(ZoneId.systemDefault()).toInstant());
+
+    Map<String, Double> report = new HashMap<>();
+
+    // Income
+    Aggregation incomeAgg = Aggregation.newAggregation(
+        Aggregation.match(Criteria.where("type").is("Income")
+            .and("userId").is(userId)
+            .and("date").gte(startDate).lt(endDate)),
+        Aggregation.group().sum("amount").as("total")
+    );
+    double income = getTotalAmount(incomeAgg);
+
+    // Expense
+    Aggregation expenseAgg = Aggregation.newAggregation(
+        Aggregation.match(Criteria.where("type").is("Expense")
+            .and("userId").is(userId)
+            .and("date").gte(startDate).lt(endDate)),
+        Aggregation.group().sum("amount").as("total")
+    );
+    double expense = getTotalAmount(expenseAgg);
+
+    report.put("income", income);
+    report.put("expense", expense);
+
+    return report;
+}
+
+// Yearly total aggregation
+public Map<String, Double> getYearlyReport(String userId, int year) {
+    LocalDate start = LocalDate.of(year, 1, 1);
+    LocalDate end = start.plusYears(1);
+
+    Date startDate = Date.from(start.atStartOfDay(ZoneId.systemDefault()).toInstant());
+    Date endDate = Date.from(end.atStartOfDay(ZoneId.systemDefault()).toInstant());
+
+    Map<String, Double> report = new HashMap<>();
+
+    Aggregation incomeAgg = Aggregation.newAggregation(
+        Aggregation.match(Criteria.where("type").is("Income")
+            .and("userId").is(userId)
+            .and("date").gte(startDate).lt(endDate)),
+        Aggregation.group().sum("amount").as("total")
+    );
+    double income = getTotalAmount(incomeAgg);
+
+    Aggregation expenseAgg = Aggregation.newAggregation(
+        Aggregation.match(Criteria.where("type").is("Expense")
+            .and("userId").is(userId)
+            .and("date").gte(startDate).lt(endDate)),
+        Aggregation.group().sum("amount").as("total")
+    );
+    double expense = getTotalAmount(expenseAgg);
+
+    report.put("income", income);
+    report.put("expense", expense);
+
+    return report;
+}
+
+private double getTotalAmount(Aggregation aggregation) {
+    AggregationResults<Result> results = mongoTemplate.aggregate(aggregation, "transaction", Result.class);
+    return results.getUniqueMappedResult() != null ? results.getUniqueMappedResult().total : 0.0;
+}
+
+private static class Result {
+    public double total;
+}
 
 }

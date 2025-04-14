@@ -72,7 +72,7 @@ public class FinanceTrackerHome extends JFrame {
                 case "Predictions" ->
                     showPanel(new PredictionsPanel(userId));
                 case "View Reports" ->
-                    showPanel(new ViewReportsPanel());
+                    showPanel(new ViewReportsPanel(userId));
             }
         }
     }

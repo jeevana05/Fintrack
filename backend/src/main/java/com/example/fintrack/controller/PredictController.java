@@ -8,7 +8,7 @@ import org.springframework.http.HttpStatus;
 import java.time.Year;
 
 
-@RestController
+/* @RestController
 @RequestMapping("/predict")
 public class PredictController {
 
@@ -27,4 +27,19 @@ public class PredictController {
 			return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
 		}
 	}
+} */
+
+@RestController
+@RequestMapping("/predict")
+public class PredictController {
+
+    private final BudgetPredictionService budgetPredictionService;
+
+    public PredictController(BudgetPredictionService budgetPredictionService) {
+        this.budgetPredictionService = budgetPredictionService;
+    }
+	@GetMapping("/fetch")
+    public BudgetResponse fetchAndPredictBudget(@RequestParam String userId) {
+        return budgetPredictionService.predictFutureBudgets(userId);
+    }
 }

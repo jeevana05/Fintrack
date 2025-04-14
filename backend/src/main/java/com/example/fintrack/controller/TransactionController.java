@@ -70,6 +70,14 @@ public List<Transaction> getUserTransactions(@RequestParam String userId) {
 public double getMonthlyIncome(@RequestParam String userId, @RequestParam String monthCode) {
     return transactionService.getMonthlyIncome(userId, monthCode);
 }
-
-
+@GetMapping("/report/monthly")
+public Map<String, Double> getMonthlyReport(@RequestParam String userId, @RequestParam String monthCode) {
+    return transactionService.getMonthlyReport(userId, monthCode);
 }
+
+@GetMapping("/report/yearly")
+public Map<String, Double> getYearlyReport(@RequestParam String userId, @RequestParam int year) {
+    return transactionService.getYearlyReport(userId, year);
+}
+}
+
