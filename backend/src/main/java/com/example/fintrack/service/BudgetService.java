@@ -59,7 +59,7 @@ public class BudgetService {
             String month = String.format("%02d", parsedDate.getMonthValue()); 
 
             // ✅ Fetch only the logged-in user's budget for the given month & category
-            List<Budget> budgets = budgetRepository.findByUserIdAndYearAndMonth(userId, year, month);
+             List<Budget> budgets = budgetRepository.findByUserIdAndYearAndMonthAndCategory(userId, year, month, category);
 
             if (budgets.isEmpty()) {
                 return -1; // No budget found for user
