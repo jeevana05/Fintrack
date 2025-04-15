@@ -9,7 +9,9 @@ import org.springframework.data.mongodb.core.mapping.Document;
 public class Transaction {
 
     @Id
-    private String id;
+
+     private String id;
+      private String userId;
     private String type;   // Income or Expense
     private double amount;
     private String category;
@@ -18,17 +20,22 @@ public class Transaction {
     public Transaction() {
     }
 
-    public Transaction(String type, double amount, String category, LocalDate date) {
+    public Transaction(String userId,String type, double amount, String category, LocalDate date) {
+         this.userId = userId;
         this.type = type;
         this.amount = amount;
         this.category = category;
         this.date = date;
     }
-
+	
+	
     public String getId() {
         return id;
     }
-
+	
+	public String getUserId() {
+        return userId;
+    }
     public void setId(String id) {
         this.id = id;
     }

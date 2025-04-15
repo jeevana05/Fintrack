@@ -14,8 +14,9 @@ import javax.swing.JPanel;
 public class FinanceTrackerHome extends JFrame {
 
     private final JPanel contentPanel;
-
-    public FinanceTrackerHome() {
+    private static String userId ;
+    public FinanceTrackerHome(String userId) {
+        this.userId = userId;
         setTitle("Personal Finance Tracker");
         setSize(800, 600);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -64,18 +65,19 @@ public class FinanceTrackerHome extends JFrame {
                 case "Home" ->
                     showPanel(new HomePanel());
                 case "Add Transactions" ->
-                    showPanel(new AddTransactionPanel());
+    
+                    showPanel(new AddTransactionPanel(userId));
                 case "Set Budgets" ->
-                    showPanel(new SetBudgetsPanel());
+                    showPanel(new SetBudgetsPanel(userId));
                 case "Predictions" ->
-                    showPanel(new PredictionsPanel());
+                    showPanel(new PredictionsPanel(userId));
                 case "View Reports" ->
-                    showPanel(new ViewReportsPanel());
+                    showPanel(new ViewReportsPanel(userId));
             }
         }
     }
 
     public static void main(String[] args) {
-        new FinanceTrackerHome();
+        new FinanceTrackerHome(userId);
     }
 }

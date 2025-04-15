@@ -48,18 +48,19 @@ public class TransactionService {
         transactionRepository.deleteById(id);
     }
 
-    // Method to calculate total income for the current month
-     public double getMonthlyIncome(String monthCode) {
+   // Method to calculate total income for the current month for a specific user
+public double getMonthlyIncome(String userId, String monthCode) {
     // Get the current year
     int currentYear = LocalDate.now().getYear();
-    
+
     // Construct YearMonth using the current year and provided month code
     YearMonth yearMonth = YearMonth.of(currentYear, Integer.parseInt(monthCode));
 
-    // Aggregation pipeline to sum income transactions for the specified month
+    // Aggregation pipeline to sum income transactions for the specified month and user
     Aggregation aggregation = Aggregation.newAggregation(
         Aggregation.match(
             Criteria.where("type").is("Income")
+                    .and("userId").is(userId) // Filter by user
                     .and("date").gte(yearMonth.atDay(1))
                     .lt(yearMonth.plusMonths(1).atDay(1))
         ),
@@ -76,5 +77,146 @@ public class TransactionService {
 private static class IncomeResult {
     double totalIncome;
 }
+// Monthly income and expenses
+public Map<String, Double> getMonthlyReport(String userId, String monthCode) {
+    int currentYear = LocalDate.now().getYear();
+    YearMonth yearMonth = YearMonth.of(currentYear, Integer.parseInt(monthCode));
+
+    Date startDate = Date.from(yearMonth.atDay(1).atStartOfDay(ZoneId.systemDefault()).toInstant());
+    Date endDate = Date.from(yearMonth.plusMonths(1).atDay(1).atStartOfDay(ZoneId.systemDefault()).toInstant());
+
+    Map<String, Double> report = new HashMap<>();
+
+    // Income
+    Aggregation incomeAgg = Aggregation.newAggregation(
+        Aggregation.match(Criteria.where("type").is("Income")
+            .and("userId").is(userId)
+            .and("date").gte(startDate).lt(endDate)),
+        Aggregation.group().sum("amount").as("total")
+    );
+    double income = getTotalAmount(incomeAgg);
+
+    // Expense
+    Aggregation expenseAgg = Aggregation.newAggregation(
+        Aggregation.match(Criteria.where("type").is("Expense")
+            .and("userId").is(userId)
+            .and("date").gte(startDate).lt(endDate)),
+        Aggregation.group().sum("amount").as("total")
+    );
+    double expense = getTotalAmount(expenseAgg);
+
+    report.put("income", income);
+    report.put("expense", expense);
+
+    return report;
+}
+
+// Yearly total aggregation
+public Map<String, Double> getYearlyReport(String userId, int year) {
+    LocalDate start = LocalDate.of(year, 1, 1);
+    LocalDate end = start.plusYears(1);
+
+    Date startDate = Date.from(start.atStartOfDay(ZoneId.systemDefault()).toInstant());
+    Date endDate = Date.from(end.atStartOfDay(ZoneId.systemDefault()).toInstant());
+
+    Map<String, Double> report = new HashMap<>();
+
+    Aggregation incomeAgg = Aggregation.newAggregation(
+        Aggregation.match(Criteria.where("type").is("Income")
+            .and("userId").is(userId)
+            .and("date").gte(startDate).lt(endDate)),
+        Aggregation.group().sum("amount").as("total")
+    );
+    double income = getTotalAmount(incomeAgg);
+
+    Aggregation expenseAgg = Aggregation.newAggregation(
+        Aggregation.match(Criteria.where("type").is("Expense")
+            .and("userId").is(userId)
+            .and("date").gte(startDate).lt(endDate)),
+        Aggregation.group().sum("amount").as("total")
+    );
+    double expense = getTotalAmount(expenseAgg);
+
+    report.put("income", income);
+    report.put("expense", expense);
+    return report;
+}
+public Map<String, Double> getCurrentBudget(String userId, int year) {
+    LocalDate start = LocalDate.of(year, 1, 1);
+    LocalDate end = start.plusYears(1);
+
+    Date startDate = Date.from(start.atStartOfDay(ZoneId.systemDefault()).toInstant());
+    Date endDate = Date.from(end.atStartOfDay(ZoneId.systemDefault()).toInstant());
+
+    Map<String, Double> result = new HashMap<>();
+
+    Aggregation expenseAgg = Aggregation.newAggregation(
+        Aggregation.match(Criteria.where("type").is("Expense")
+            .and("userId").is(userId)
+            .and("date").gte(startDate).lt(endDate)),
+        Aggregation.group().sum("amount").as("total")
+    );
+
+    double currentBudget = getTotalAmount(expenseAgg);
+    result.put("currentBudget", currentBudget);
+
+    return result;
+}
+
+
+private double getTotalAmount(Aggregation aggregation) {
+    AggregationResults<Result> results = mongoTemplate.aggregate(aggregation, "transaction", Result.class);
+    return results.getUniqueMappedResult() != null ? results.getUniqueMappedResult().total : 0.0;
+}
+
+private static class Result {
+    public double total;
+}
+public Map<String, Object> getCurrentBudgetAndPredictions(String userId, int year) {
+        // Fetch current budget
+        LocalDate start = LocalDate.of(year, 1, 1);
+        LocalDate end = start.plusYears(1);
+
+        Date startDate = Date.from(start.atStartOfDay(ZoneId.systemDefault()).toInstant());
+        Date endDate = Date.from(end.atStartOfDay(ZoneId.systemDefault()).toInstant());
+
+        Map<String, Object> result = new HashMap<>();
+
+        Aggregation expenseAgg = Aggregation.newAggregation(
+            Aggregation.match(Criteria.where("type").is("Expense")
+                .and("userId").is(userId)
+                .and("date").gte(startDate).lt(endDate)),
+            Aggregation.group().sum("amount").as("total")
+        );
+
+        double currentBudget = getTotalAmount(expenseAgg);
+        result.put("currentBudget", currentBudget);
+
+        // Fetch future budget predictions based on current budget
+        double[] futureBudgets = predictFutureBudgets(currentBudget);
+        result.put("futureBudgets", futureBudgets);
+
+        return result;
+    }
+
+/*     private double getTotalAmount(Aggregation aggregation) {
+        // Execute the aggregation query
+        AggregationResults<Map> results = mongoTemplate.aggregate(aggregation, "transaction", Map.class);
+        Map resultMap = results.getUniqueMappedResult();
+        return resultMap != null ? (double) resultMap.get("total") : 0.0;
+    } */
+
+    // Method to predict future budgets based on current budget and inflation rates
+    private double[] predictFutureBudgets(double currentBudget) {
+        double[] futureBudgets = new double[3];
+        double[] inflationRates = {0.06, 0.07, 0.08};  // 6%, 7%, 8% inflation for the next 3 years
+
+        for (int i = 0; i < 3; i++) {
+            currentBudget += currentBudget * inflationRates[i];
+            futureBudgets[i] = currentBudget;
+        }
+
+        return futureBudgets;
+    }
 
 }
