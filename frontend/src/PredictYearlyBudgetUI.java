@@ -16,6 +16,8 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
+import java.time.LocalDate;
+
 
 public class PredictYearlyBudgetUI {
     private JFrame frame;
@@ -88,37 +90,50 @@ public class PredictYearlyBudgetUI {
 
     // 1. Fetch prediction from backend
     private void predictBudget(ActionEvent e) {
-        try {
-            URI uri = new URI("http://localhost:8080/budget/fetch?userId=" + userId);
-            URL url = uri.toURL();
+    try {
+        int currentYear = LocalDate.now().getYear();
+        URI uri = new URI("http://localhost:8080/transactions/report/yearly?userId=" + userId + "&year=" + currentYear);
+        URL url = uri.toURL();
 
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("GET");
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("GET");
 
+        if (conn.getResponseCode() == 200) {
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
-                String response = reader.readLine();
-                parseAndDisplayBudget(response);
+                StringBuilder jsonBuilder = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    jsonBuilder.append(line);
+                }
+                String response = jsonBuilder.toString();
+                parseAndDisplayBudget(response); // This should handle JSON like {"income":12345.67, "expense":9876.54}
             }
-
-        } catch (Exception ex) {
-            updateResult("Error fetching prediction");
-            ex.printStackTrace();
+        } else {
+            updateResult("Failed to fetch yearly prediction: " + conn.getResponseCode());
         }
+
+    } catch (Exception ex) {
+        updateResult("Error fetching prediction");
+        ex.printStackTrace();
     }
+}
+
 
     // 2. Parse and show budget + chart
     private void parseAndDisplayBudget(String json) {
-        if (json == null || json.isEmpty()) {
-            updateResult("No data received.");
-            return;
-        }
+    if (json == null || json.isEmpty()) {
+        updateResult("No data received.");
+        return;
+    }
 
-        if (json.contains("error")) {
-            updateResult("User not found. Please try again.");
-            return;
-        }
+    if (json.contains("error")) {
+        updateResult("User not found. Please try again.");
+        return;
+    }
 
-        try {
+    try {
+        if (json.contains("currentBudget")) {
+            // Handle budget prediction response
             String currentBudgetStr = json.split("\"currentBudget\":")[1].split(",")[0].trim();
             double currentBudget = Double.parseDouble(currentBudgetStr);
 
@@ -134,19 +149,39 @@ public class PredictYearlyBudgetUI {
             double year3 = Double.parseDouble(futureBudgets[2].trim());
 
             StringBuilder result = new StringBuilder("📊 Budget Prediction:\n");
-            result.append("Current Budget: $").append(currentBudget).append("\n");
-            result.append("Year 1 (6% Inflation): $").append(year1).append("\n");
-            result.append("Year 2 (7% Inflation): $").append(year2).append("\n");
-            result.append("Year 3 (8% Inflation): $").append(year3).append("\n");
+            result.append("Current Budget: ₹").append(currentBudget).append("\n");
+            result.append("Year 1 (6% Inflation): ₹").append(year1).append("\n");
+            result.append("Year 2 (7% Inflation): ₹").append(year2).append("\n");
+            result.append("Year 3 (8% Inflation): ₹").append(year3).append("\n");
             updateResult(result.toString());
 
             showBudgetChart(currentBudget, year1, year2, year3);
+        } 
+        else if (json.contains("income") && json.contains("expense")) {
+            // Handle yearly report response
+            String incomeStr = json.split("\"income\":")[1].split(",")[0].trim();
+            String expenseStr = json.split("\"expense\":")[1]
+                                   .replace("}", "")
+                                   .trim();
 
-        } catch (Exception e) {
-            e.printStackTrace();
-            updateResult("Error parsing budget data.");
+            double income = Double.parseDouble(incomeStr);
+            double expense = Double.parseDouble(expenseStr);
+
+            StringBuilder result = new StringBuilder("📈 Yearly Financial Report:\n");
+            result.append("Total Income: ₹").append(income).append("\n");
+            result.append("Total Expense: ₹").append(expense).append("\n");
+            result.append("Net Savings: ₹").append(income - expense);
+            updateResult(result.toString());
+        } 
+        else {
+            updateResult("Unknown response format.");
         }
+    } catch (Exception e) {
+        e.printStackTrace();
+        updateResult("Error parsing budget data.");
     }
+}
+
 
     // 3. Show the chart
     private void showBudgetChart(double currentBudget, double year1, double year2, double year3) {

@@ -79,5 +79,13 @@ public Map<String, Double> getMonthlyReport(@RequestParam String userId, @Reques
 public Map<String, Double> getYearlyReport(@RequestParam String userId, @RequestParam int year) {
     return transactionService.getYearlyReport(userId, year);
 }
+/*     @GetMapping("/budget/current")
+    public Map<String, Double> getCurrentBudget(@RequestParam String userId, @RequestParam int year) {
+        return transactionService.getCurrentBudget(userId, year);
+    } */
+@GetMapping("/budget/current")
+public Map<String, Object> getCurrentBudgetAndPredictions(@RequestParam String userId, @RequestParam int year) {
+    return transactionService.getCurrentBudgetAndPredictions(userId, year);
+}
 }
 
