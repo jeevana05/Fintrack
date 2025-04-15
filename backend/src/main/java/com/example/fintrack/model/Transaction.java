@@ -27,11 +27,15 @@ public class Transaction {
         this.category = category;
         this.date = date;
     }
-
+	
+	
     public String getId() {
         return id;
     }
-
+	
+	public String getUserId() {
+        return userId;
+    }
     public void setId(String id) {
         this.id = id;
     }

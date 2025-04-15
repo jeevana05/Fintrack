@@ -22,6 +22,7 @@ import javax.swing.JPanel;
 import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 import javax.swing.SwingWorker;
+import javax.swing.JFrame;
 
 public class LoginPanel extends JPanel {
 
@@ -155,30 +156,42 @@ public class LoginPanel extends JPanel {
         }
 
         @Override
-        protected void done() {
-            try {
-                boolean success = get();
-                if (success) {
-                    JOptionPane.showMessageDialog(LoginPanel.this, 
-                        "Login successful!", 
-                        "Success", 
-                        JOptionPane.INFORMATION_MESSAGE);
-                    new FinanceTrackerHome(username); // Now works
-                    usernameField.setText("");
-                    passwordField.setText("");
-                } else {
-                    JOptionPane.showMessageDialog(LoginPanel.this, 
-                        "Invalid username or password", 
-                        "Login Failed", 
-                        JOptionPane.ERROR_MESSAGE);
-                }
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(LoginPanel.this, 
-                    "Error: " + ex.getMessage(), 
-                    "Login Error", 
-                    JOptionPane.ERROR_MESSAGE);
-            }
-        }
+		protected void done() {
+			try {
+				boolean success = get();
+				if (success) {
+					JOptionPane.showMessageDialog(LoginPanel.this, 
+						"Login successful!", 
+						"Success", 
+						JOptionPane.INFORMATION_MESSAGE);
+
+					// Check for admin
+					if (username.equalsIgnoreCase("admin")) {
+						JFrame adminFrame = new JFrame("Admin Dashboard");
+						adminFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+						adminFrame.setSize(600, 400);
+						adminFrame.setLocationRelativeTo(null);
+						adminFrame.add(new AdminPanel()); // Open Admin Panel
+						adminFrame.setVisible(true);
+					} else {
+						new FinanceTrackerHome(username); // For regular users
+					}
+
+					usernameField.setText("");
+					passwordField.setText("");
+				} else {
+					JOptionPane.showMessageDialog(LoginPanel.this, 
+						"Invalid username or password", 
+						"Login Failed", 
+						JOptionPane.ERROR_MESSAGE);
+				}
+			} catch (Exception ex) {
+				JOptionPane.showMessageDialog(LoginPanel.this, 
+					"Error: " + ex.getMessage(), 
+					"Login Error", 
+					JOptionPane.ERROR_MESSAGE);
+			}
+		}
     }.execute();
 }
 

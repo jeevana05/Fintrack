@@ -10,7 +10,8 @@ import java.util.List;
 public interface TransactionRepository extends MongoRepository<Transaction, String> {
 
     List<Transaction> findByType(String type);
-     List<Transaction> findByUserId(String userId);
+    List<Transaction> findByUserId(String userId);
+	List<Transaction> findAll();
 
     @Query("{ 'type': 'Income', 'date': { $gte: ?0, $lte: ?1 } }")
     Double getTotalIncomeForMonth(Date startDate, Date endDate);
