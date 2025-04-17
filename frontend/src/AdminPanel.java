@@ -1,8 +1,7 @@
-import javax.swing.*;
+
+ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
@@ -14,35 +13,25 @@ public class AdminPanel extends JPanel {
 
     public AdminPanel() {
         setLayout(new BorderLayout());
-        setBackground(new Color(245, 245, 245));
+        setBackground(new Color(250, 250, 250));
 
         // Title
         JLabel titleLabel = new JLabel("Admin Dashboard", SwingConstants.CENTER);
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
-        titleLabel.setForeground(new Color(52, 152, 219));
-        titleLabel.setBorder(new EmptyBorder(20, 0, 20, 0));
+        titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        titleLabel.setForeground(new Color(52, 73, 94));
+        titleLabel.setBorder(new EmptyBorder(20, 0, 10, 0));
         add(titleLabel, BorderLayout.NORTH);
 
-        // Buttons panel
+        // Button panel
         JPanel buttonPanel = new JPanel();
         buttonPanel.setLayout(new GridLayout(3, 1, 20, 20));
-        buttonPanel.setBorder(new EmptyBorder(50, 150, 50, 150));
-        buttonPanel.setBackground(new Color(236, 240, 241));
+        buttonPanel.setBorder(new EmptyBorder(30, 300, 30, 300));
+        buttonPanel.setBackground(new Color(250, 250, 250));
 
-        viewUsersButton = new JButton("View All Users");
-        viewTransactionsButton = new JButton("View All Transactions");
-        viewBudgetsButton = new JButton("View All Budgets");
+        viewUsersButton = createStyledButton("View All Users");
+        viewTransactionsButton = createStyledButton("View All Transactions");
+        viewBudgetsButton = createStyledButton("View All Budgets");
 
-        // Style buttons
-        JButton[] buttons = { viewUsersButton, viewTransactionsButton, viewBudgetsButton };
-        for (JButton btn : buttons) {
-            btn.setFont(new Font("Arial", Font.BOLD, 16));
-            btn.setBackground(new Color(52, 152, 219));
-            btn.setForeground(Color.WHITE);
-            btn.setFocusPainted(false);
-        }
-
-        // Add action listeners
         viewUsersButton.addActionListener(e -> fetchAndShow("Users", "/users"));
         viewTransactionsButton.addActionListener(e -> fetchAndShow("Transactions", "/transactions"));
         viewBudgetsButton.addActionListener(e -> fetchAndShow("Budgets", "/budgets"));
@@ -52,6 +41,31 @@ public class AdminPanel extends JPanel {
         buttonPanel.add(viewBudgetsButton);
 
         add(buttonPanel, BorderLayout.CENTER);
+    }
+
+    private JButton createStyledButton(String text) {
+        JButton button = new JButton(text);
+        button.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        button.setBackground(new Color(52, 152, 219));
+        button.setForeground(Color.WHITE);
+        button.setFocusPainted(false);
+        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        button.setBorder(BorderFactory.createEmptyBorder(10, 15, 10, 15));
+        button.setPreferredSize(new Dimension(200, 40));
+        button.setBorder(BorderFactory.createLineBorder(new Color(41, 128, 185), 1, true));
+
+        // Hover effect
+        button.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                button.setBackground(new Color(41, 128, 185));
+            }
+
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                button.setBackground(new Color(52, 152, 219));
+            }
+        });
+
+        return button;
     }
 
     private void fetchAndShow(String title, String endpoint) {
@@ -92,13 +106,14 @@ public class AdminPanel extends JPanel {
     private void showResultDialog(String title, String data) {
         JTextArea textArea = new JTextArea(data);
         textArea.setEditable(false);
-        textArea.setFont(new Font("Monospaced", Font.PLAIN, 14));
+        textArea.setFont(new Font("Monospaced", Font.PLAIN, 13));
         JScrollPane scrollPane = new JScrollPane(textArea);
+        scrollPane.setPreferredSize(new Dimension(600, 400));
 
         JOptionPane.showMessageDialog(this, scrollPane, title, JOptionPane.INFORMATION_MESSAGE);
     }
 
-    // Getters (if needed externally)
+    // Optional: getters for testing
     public JButton getViewUsersButton() {
         return viewUsersButton;
     }
